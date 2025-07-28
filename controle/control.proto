@@ -1,0 +1,337 @@
+syntax = "proto3";
+
+package controle;
+
+option go_package = "github.com/thekrauss/nafyp-protos/gen/go/control";
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+//
+// ===================== Service =====================
+//
+
+service NodeService {
+  // Enregistrement initial d’un nœud
+  rpc RegisterNode(RegisterRequest) returns (RegisterResponse) {
+    option (google.api.http) = {
+      post: "/v1/register-node"
+      body: "*"
+    };
+  }
+
+  // Ping de santé et métriques
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option (google.api.http) = {
+      post: "/v1/ping"
+      body: "*"
+    };
+  }
+
+  // Récupération des logs d’audit
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes/audit-logs"
+    };
+  }
+
+  // Liste les nœuds d’un tenant
+  rpc ListNodesByTenant(TenantRequest) returns (NodeListResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes"
+    };
+  }
+
+  // Mise à jour des métadonnées d’un nœud (nom, IP, tags)
+  rpc UpdateNodeMetadata(UpdateNodeRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/v1/nodes/{node_id}"
+      body: "*"
+    };
+  }
+
+  // Changement de statut du nœud (online, offline, degraded)
+  rpc SetNodeStatus(NodeStatusRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/nodes/{node_id}/status"
+      body: "*"
+    };
+  }
+
+  // Détail d’un nœud par ID
+  rpc GetNodeByID(GetNodeRequest) returns (Node) {
+    option (google.api.http) = {
+      get: "/v1/nodes/{node_id}"
+    };
+  }
+
+  // Compte les nœuds actifs sur une période
+  rpc CountActiveNodes(CountActiveNodesRequest) returns (CountActiveNodesResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes/active_count"
+    };
+  }
+
+  // Liste des nœuds blacklistés
+  rpc ListBlacklistedNodes(ListNodesRequest) returns (ListNodesResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes/blacklisted"
+    };
+  }
+
+  // Ajout à la blacklist
+  rpc BlacklistNode(NodeID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/nodes/{node_id}/blacklist"
+    };
+  }
+
+  // Retrait de la blacklist
+  rpc UnblacklistNode(NodeID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/nodes/{node_id}/unblacklist"
+    };
+  }
+
+  // Recherche de nœuds
+  rpc SearchNodes(SearchRequest) returns (SearchResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes/search"
+    };
+  }
+
+  // Mise à jour de la configuration d’un nœud
+  rpc UpdateNodeConfig(UpdateNodeConfigRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/v1/nodes/{node_id}/config"
+      body: "*"
+    };
+  }
+
+  // Suppression de la configuration d’un nœud
+  rpc DeleteNodeConfig(NodeID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/nodes/{node_id}/config"
+    };
+  }
+
+  // Récupération de la configuration d’un nœud
+  rpc GetNodeConfig(GetNodeRequest) returns (NodeConfigResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes/{node_id}/config"
+    };
+  }
+
+  // Redémarrage orchestré via Temporal
+  rpc RestartNode(NodeID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/nodes/{node_id}/restart"
+    };
+  }
+
+  // Mise à jour de l’agent logiciel
+  rpc UpdateAgent(NodeID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/nodes/{node_id}/update-agent"
+    };
+  }
+
+  // Déploiement (config, version, etc.)
+  rpc DeployNode(NodeID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/nodes/{node_id}/deploy"
+    };
+  }
+}
+
+//
+// ===================== Enums =====================
+//
+
+enum NodeStatus {
+  NODE_STATUS_UNSPECIFIED = 0;
+  NODE_ONLINE = 1;
+  NODE_OFFLINE = 2;
+  NODE_DEGRADED = 3;
+}
+
+//
+// ===================== Messages =====================
+//
+
+// -- Registration & Health --
+
+message RegisterRequest {
+  string node_id = 1;
+  string ip = 2;
+  string hostname = 3;
+  string location = 4;
+  string provider = 5;
+  string version = 6;
+  repeated string tags = 7;
+  string id_tenant = 8;
+}
+
+message RegisterResponse {
+  string message = 1;
+  string node_id = 2;
+}
+
+message PingRequest {
+  string node_id = 1;
+  float cpu = 2;
+  float memory = 3;
+  int32 uptime_seconds = 4;
+  int32 connections = 5;
+  string status = 6; // healthy, slow, critical
+}
+
+message PingResponse {
+  string status = 1; // ok, failed, warning
+}
+
+// -- Audit Logs --
+
+message GetAuditLogsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  optional string action = 3;
+  optional string user_id = 4;
+  optional string tenant_id = 5;
+}
+
+message AuditLogEntry {
+  string id = 1;
+  string user_id = 2;
+  string role = 3;
+  string action = 4;
+  string target = 5;
+  string details = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+  string tenant_id = 9;
+  string timestamp = 10;
+}
+
+message GetAuditLogsResponse {
+  repeated AuditLogEntry logs = 1;
+  int32 total = 2;
+}
+
+// -- Node Management --
+
+message TenantRequest {
+  string tenant_id = 1;
+}
+
+message NodeListResponse {
+  repeated Node nodes = 1;
+}
+
+message UpdateNodeRequest {
+  string node_id = 1;
+  string name = 2;
+  string ip = 3;
+  map<string, string> tags = 4;
+}
+
+message NodeStatusRequest {
+  string node_id = 1;
+  NodeStatus status = 2;
+}
+
+message GetNodeRequest {
+  string node_id = 1;
+}
+
+message NodeID {
+  string node_id = 1;
+}
+
+message Node {
+  string id = 1;
+  string name = 2;
+  string ip = 3;
+  string tenant_id = 4;
+  string status = 5;
+  string location = 6;
+  string provider = 7;
+  string software_version = 8;
+  repeated string tags = 9;
+  string os = 10;
+  string last_seen = 11;
+  string created_at = 12;
+  string updated_at = 13;
+  bool is_blacklisted = 14;
+}
+
+// -- Command Stream --
+
+message CommandRequest {
+  string node_id = 1;
+  string type = 2;    // restart, update, etc.
+  string payload = 3;
+}
+
+message Command {
+  string id = 1;
+  string type = 2;
+  string payload = 3;
+  string created_at = 4;
+}
+
+message CommandResultRequest {
+  string command_id = 1;
+  string node_id = 2;
+  bool success = 3;
+  string output = 4;
+  string timestamp = 5;
+}
+
+// -- Search & Filter --
+
+message SearchRequest {
+  string tenant_id = 1;
+  string query = 2;
+}
+
+message SearchResponse {
+  repeated Node nodes = 1;
+}
+
+message ListNodesRequest {
+  string tenant_id = 1;
+}
+
+message ListNodesResponse {
+  repeated Node nodes = 1;
+}
+
+// -- Analytics --
+
+message CountActiveNodesRequest {
+  string tenant_id = 1;
+  int32 since_seconds = 2; // 3600 = dernière heure
+}
+
+message CountActiveNodesResponse {
+  int32 count = 1;
+}
+
+// -- Configuration --
+
+message UpdateNodeConfigRequest {
+  string node_id = 1;
+  int32 ping_interval = 2;
+  int32 metrics_interval = 3;
+  bool dynamic_config = 4;
+  map<string, string> custom_labels = 5;
+}
+
+message NodeConfigResponse {
+  string node_id = 1;
+  int32 ping_interval = 2;
+  int32 metrics_interval = 3;
+  bool dynamic_config = 4;
+  map<string, string> custom_labels = 5;
+}
