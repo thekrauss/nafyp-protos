@@ -1,19 +1,14 @@
-# Fichiers compilés par protoc
 gen/
 *.pb.go
 
-# Fichiers temporaires / éditeurs
 *.swp
 *.swo
 *.log
 .DS_Store
 
-# IDE / outils
 .idea/
 .vscode/
 
-# Modules Go vendored (optionnel si tu les ajoutes)
 vendor/
 
-# Google protos clonés
 third_party/googleapis/
