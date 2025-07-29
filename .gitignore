@@ -1,6 +1,3 @@
-gen/
-*.pb.go
-
 *.swp
 *.swo
 *.log
